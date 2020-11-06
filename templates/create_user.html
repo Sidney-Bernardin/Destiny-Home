@@ -3,11 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <link rel="stylesheet" href="../static/create_user.css">
+  <title>Create User</title>
 </head>
 <body>
   <div class="wrapper">
-    
+
+    <form action="/create_user" method="POST">
+
+      <label for="username">Username: </label>
+      <input type="text" name="username" placeholder="Username"><br>
+
+      <label for="gamertag">Gamertag: </label>
+      <input type="text" name="gamertag" placeholder="Gamertag"><br>
+
+      <label for="membershipType">Membership Type: </label>
+      <select name="membershipType">
+        <option value="2">Playstation</option>
+        <option value="1">X Box</option>
+        <option value="3">Battle.net</option>
+        <option value="-1">All</option>
+      </select><br>
+
+      <input type="submit" value="Create User">
+    </form>
   </div>
 </body>
 </html>
