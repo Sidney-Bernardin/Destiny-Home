@@ -1,30 +1,30 @@
 package destinyhome
 
 type modelUser struct {
-	username       string
-	gamertag       string
-	membershipType string
-	membershipID   string
-	characters     [3]modelCharacter
+	Username       string
+	Gamertag       string
+	MembershipType string
+	MembershipID   string
+	Characters     []modelCharacter
 }
 
 type modelCharacter struct {
-	id       string
-	loadouts [3]modelLoadout
+	ID       string
+	Loadouts []modelLoadout
 }
 
 type modelLoadout struct {
-	type_ string
+	Type_ string
 
-	subclassID string
+	SubclassID string
 
-	headID      string
-	armsID      string
-	chestID     string
-	legsID      string
-	classItemID string
+	HeadID      string
+	ArmsID      string
+	ChestID     string
+	LegsID      string
+	ClassItemID string
 
-	kineticID string
-	specialID string
-	heavyID   string
+	KineticID string
+	SpecialID string
+	HeavyID   string
 }

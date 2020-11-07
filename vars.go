@@ -1,7 +1,12 @@
 package destinyhome
 
-import "text/template"
+import (
+	"os"
+	"text/template"
+)
 
 var (
-	temps *template.Template
+	temps     *template.Template
+	apiKey    = os.Getenv("BUNGIE_API_KEY")
+	projectID = os.Getenv("PROJECT_ID")
 )
