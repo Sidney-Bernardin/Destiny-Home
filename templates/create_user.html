@@ -9,7 +9,7 @@
 <body>
   <div class="wrapper">
 
-    <form action="/create_user" method="POST">
+    <form action="/{{ .CreateUserEndpoint }}" method="POST">
 
       <label for="username">Username: </label>
       <input type="text" name="username" placeholder="Username"><br>

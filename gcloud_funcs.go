@@ -2,6 +2,7 @@ package destinyhome
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -41,7 +42,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		if len(res.Response) == 0 {
 
 			err := "couldn't find destiny player: " + gamertag
-			http.Error(w, err, http.StatusInternalServerError)
+			http.Error(w, err, http.StatusNotFound)
 			return
 		}
 
@@ -104,10 +105,49 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Execute the, create_user.html template.
-	err := temps.ExecuteTemplate(w, "create_user.html", nil)
+	err := temps.ExecuteTemplate(w, "create_user.html", map[string]string{
+		"CreateUserEndpoint": createUserEndpoint,
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func MainWebHook(w http.ResponseWriter, r *http.Request) {}
+func Webhook(w http.ResponseWriter, r *http.Request) {
+
+	var (
+		req webhookRequest
+		res webhookResponse
+	)
+
+	// Decode response body.
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+
+	// Process the handler.
+	switch req.Handler.Name {
+
+	case "get_item":
+
+		item := req.Intent.Params["item"].Resolved
+		res.Prompt.FirstSimple.Speech = "I got " + item
+		res.Session.ID = req.Session.ID
+		res.Scene.Name = req.Scene.Name
+		res.Scene.Next.Name = "actions.scene.END_CONVERSATION"
+	}
+
+	js, err := json.Marshal(res)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	r.Header.Set("Content-Type", "application/json")
+	_, err = w.Write(js)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
