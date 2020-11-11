@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,23 +30,17 @@ func TestCreateUser(t *testing.T) {
 
 func TestWebhook(t *testing.T) {
 
-	// Setup tast cases.
+	// Setup test cases.
 	tables := []struct {
 		handler string
 		params  map[string]param
 	}{
 		{
-			handler: "get_item",
+			handler: "get_equiped_item",
 			params: map[string]param{
-				"account": {
-					Resolved: "sidney",
-				},
-				"item": {
-					Resolved: "helmet",
-				},
-				"guardian_index": {
-					Resolved: "1",
-				},
+				"username":       {Resolved: "Sydney"},
+				"bucket":         {Resolved: "helmet"},
+				"guardian_index": {Resolved: "1"},
 			},
 		},
 	}
@@ -81,17 +76,18 @@ func TestWebhook(t *testing.T) {
 
 		// Check the status code.
 		if res.StatusCode != 200 {
-			t.Fatalf("Status code is not 200, got %s", res.Status)
+			t.Errorf("status code is not 200, got %s", res.Status)
 		}
 
+		// Print the response.
 		if *see {
 
-			var res2 webhookResponse
-			if err := json.NewDecoder(res.Body).Decode(&res2); err != nil {
-				t.Fatalf("couldn't decode reponse: %v", err)
+			b, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("couldn't read response body: %v", err)
 			}
 
-			fmt.Println(res2.Prompt.FirstSimple.Speech)
+			fmt.Println(string(b))
 		}
 	}
 }

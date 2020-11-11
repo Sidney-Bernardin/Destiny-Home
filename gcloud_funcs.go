@@ -8,6 +8,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"github.com/Sidney-Bernardin/bungo"
+	"github.com/pkg/errors"
 )
 
 // CreateUser is a Google Cloud Function for creating users.
@@ -120,34 +121,36 @@ func Webhook(w http.ResponseWriter, r *http.Request) {
 		res webhookResponse
 	)
 
-	// Decode response body.
+	// Decode request body.
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 
-	// Process the handler.
-	switch req.Handler.Name {
+	// Process the request.
+	if err := processRequest(&req, &res); err != nil {
 
-	case "get_item":
+		switch errors.Cause(err) {
 
-		item := req.Intent.Params["item"].Resolved
-		res.Prompt.FirstSimple.Speech = "I got " + item
-		res.Session.ID = req.Session.ID
-		res.Scene.Name = req.Scene.Name
-		res.Scene.Next.Name = "actions.scene.END_CONVERSATION"
+		case errUserNotFound:
+			res.Prompt.FirstSimple.Speech = `I couldn't find you in my database.`
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 	}
 
+	// Turn the response into bytes.
 	js, err := json.Marshal(res)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Set headers.
 	r.Header.Set("Content-Type", "application/json")
+
+	// Respond.
 	_, err = w.Write(js)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 }
