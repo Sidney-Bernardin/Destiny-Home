@@ -3,18 +3,54 @@ package destinyhome
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/datastore"
 	"github.com/Sidney-Bernardin/bungo"
-	"github.com/pkg/errors"
 )
+
+// Entry defines a log entry.
+type Entry struct {
+	Message  string `json:"message"`
+	Severity string `json:"severity,omitempty"`
+	Trace    string `json:"logging.googleapis.com/trace,omitempty"`
+
+	// Cloud Log Viewer allows filtering and display of this as `jsonPayload.component`.
+	Component string `json:"component,omitempty"`
+}
+
+// String renders an entry structure to the JSON format expected by Cloud Logging.
+func (e Entry) String() string {
+
+	if e.Severity == "" {
+		e.Severity = "INFO"
+	}
+
+	out, err := json.Marshal(e)
+	if err != nil {
+		log.Printf("json.Marshal: %v", err)
+	}
+
+	return string(out)
+}
 
 // CreateUser is a Google Cloud Function for creating users.
 // After it asks the user for their destiny info, it adds them
 // to a Google Cloud Datastore, Database.
 func CreateUser(w http.ResponseWriter, r *http.Request) {
+
+	var trace string
+
+	// Derive the traceID associated with the current request.
+	traceHeader := r.Header.Get("X-Cloud-Trace-Context")
+	traceParts := strings.Split(traceHeader, "/")
+	if len(traceParts) > 0 && len(traceParts[0]) > 0 {
+		trace = fmt.Sprintf("projects/%s/traces/%s", projectID, traceParts[0])
+	}
 
 	// If form was submited (if request method is POST), create and store the
 	// user into the database.
@@ -28,6 +64,13 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		// Create bungo service.
 		s, err := bungo.NewService(&http.Client{}, apiKey)
 		if err != nil {
+
+			log.Println(Entry{
+				Message:  err.Error(),
+				Severity: "CRITICAL",
+				Trace:    trace,
+			})
+
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -35,6 +78,13 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		// Use SearchDestinyPlayer to get the membershipID.
 		res, err := s.Destiny2.SearchDestinyPlayer(membershipType, gamertag).Do()
 		if err != nil {
+
+			log.Println(Entry{
+				Message:  err.Error(),
+				Severity: "CRITICAL",
+				Trace:    trace,
+			})
+
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -54,6 +104,13 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		res2, err := s.Destiny2.GetProfile(membershipType, membershipID).
 			Components("Profiles").Do()
 		if err != nil {
+
+			log.Println(Entry{
+				Message:  err.Error(),
+				Severity: "CRITICAL",
+				Trace:    trace,
+			})
+
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -91,6 +148,13 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		// Create a datastore client.
 		c, err := datastore.NewClient(ctx, projectID)
 		if err != nil {
+
+			log.Println(Entry{
+				Message:  err.Error(),
+				Severity: "CRITICAL",
+				Trace:    trace,
+			})
+
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -98,6 +162,13 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		// Store the user into the database.
 		key := datastore.IncompleteKey("User", nil)
 		if _, err := c.Put(ctx, key, &user); err != nil {
+
+			log.Println(Entry{
+				Message:  err.Error(),
+				Severity: "CRITICAL",
+				Trace:    trace,
+			})
+
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -109,6 +180,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	err := temps.ExecuteTemplate(w, "create_user.html", map[string]string{
 		"CreateUserEndpoint": createUserEndpoint,
 	})
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -117,9 +189,17 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 func Webhook(w http.ResponseWriter, r *http.Request) {
 
 	var (
-		req webhookRequest
-		res webhookResponse
+		req   webhookRequest
+		res   webhookResponse
+		trace string
 	)
+
+	// Derive the traceID associated with the current request.
+	traceHeader := r.Header.Get("X-Cloud-Trace-Context")
+	traceParts := strings.Split(traceHeader, "/")
+	if len(traceParts) > 0 && len(traceParts[0]) > 0 {
+		trace = fmt.Sprintf("projects/%s/traces/%s", projectID, traceParts[0])
+	}
 
 	// Decode request body.
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -130,12 +210,21 @@ func Webhook(w http.ResponseWriter, r *http.Request) {
 	// Process the request.
 	if err := processRequest(&req, &res); err != nil {
 
-		switch errors.Cause(err) {
+		switch err {
 
 		case errUserNotFound:
 			res.Prompt.FirstSimple.Speech = `I couldn't find you in my database.`
 			w.WriteHeader(http.StatusNotFound)
+
 		default:
+
+			log.Println(Entry{
+				Message:  err.Error(),
+				Severity: "CRITICAL",
+				Trace:    trace,
+			})
+
+			res.Prompt.FirstSimple.Speech = `My backend systems are not working right now, try again later.`
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}
@@ -143,6 +232,13 @@ func Webhook(w http.ResponseWriter, r *http.Request) {
 	// Turn the response into bytes.
 	js, err := json.Marshal(res)
 	if err != nil {
+
+		log.Println(Entry{
+			Message:  err.Error(),
+			Severity: "CRITICAL",
+			Trace:    trace,
+		})
+
 		return
 	}
 
@@ -152,5 +248,6 @@ func Webhook(w http.ResponseWriter, r *http.Request) {
 	// Respond.
 	_, err = w.Write(js)
 	if err != nil {
+
 	}
 }

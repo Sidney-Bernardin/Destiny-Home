@@ -63,7 +63,6 @@ func getUser(username string) (*modelUser, error) {
 		return nil, err
 	}
 
-	// TODO: Get rid of this
 	if len(users) == 0 {
 		return nil, errUserNotFound
 	}

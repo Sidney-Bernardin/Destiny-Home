@@ -39,7 +39,31 @@ func TestWebhook(t *testing.T) {
 			handler: "get_equiped_item",
 			params: map[string]param{
 				"username":       {Resolved: "Sydney"},
-				"bucket":         {Resolved: "helmet"},
+				"bucket":         {Resolved: "head"},
+				"guardian_index": {Resolved: "1"},
+			},
+		},
+		{
+			handler: "get_equiped_item",
+			params: map[string]param{
+				"username":       {Resolved: "Sydney"},
+				"bucket":         {Resolved: "chest"},
+				"guardian_index": {Resolved: "0"},
+			},
+		},
+		{
+			handler: "get_equiped_item",
+			params: map[string]param{
+				"username":       {Resolved: "Sydney"},
+				"bucket":         {Resolved: "legs"},
+				"guardian_index": {Resolved: "2"},
+			},
+		},
+		{
+			handler: "get_equiped_item",
+			params: map[string]param{
+				"username":       {Resolved: "Sydney"},
+				"bucket":         {Resolved: "arms"},
 				"guardian_index": {Resolved: "1"},
 			},
 		},
@@ -47,6 +71,11 @@ func TestWebhook(t *testing.T) {
 
 	// Run test cases.
 	for _, table := range tables {
+
+		// Print request.
+		if *see {
+			fmt.Printf("running test case\n\trequest: %v\n", table)
+		}
 
 		// Setup request body.
 		var req webhookRequest
@@ -79,7 +108,7 @@ func TestWebhook(t *testing.T) {
 			t.Errorf("status code is not 200, got %s", res.Status)
 		}
 
-		// Print the response.
+		// Print response.
 		if *see {
 
 			b, err := ioutil.ReadAll(res.Body)
@@ -87,7 +116,8 @@ func TestWebhook(t *testing.T) {
 				t.Fatalf("couldn't read response body: %v", err)
 			}
 
-			fmt.Println(string(b))
+			fmt.Printf("\tresponse: %s\n", string(b))
+			fmt.Println("ending test case")
 		}
 	}
 }
