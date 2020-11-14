@@ -42,16 +42,13 @@ func (e Entry) String() string {
 // After it asks the user for their destiny info, it adds them
 // to a Google Cloud Datastore, Database.
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-
 	var trace string
-
 	// Derive the traceID associated with the current request.
 	traceHeader := r.Header.Get("X-Cloud-Trace-Context")
 	traceParts := strings.Split(traceHeader, "/")
 	if len(traceParts) > 0 && len(traceParts[0]) > 0 {
 		trace = fmt.Sprintf("projects/%s/traces/%s", projectID, traceParts[0])
 	}
-
 	// If form was submited (if request method is POST), create and store the
 	// user into the database.
 	if r.Method == "POST" {
