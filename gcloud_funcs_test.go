@@ -16,13 +16,13 @@ var (
 	see  = flag.Bool("see", false, "See the responses of the Webhook test.")
 )
 
-func TestCreateUser(t *testing.T) {
+func TestAdmin(t *testing.T) {
 
 	// Handle the CreateUser function.
-	http.HandleFunc("/"+createUserEndpoint, CreateUser)
+	http.HandleFunc("/"+adminEndpoint, Admin)
 
 	// Start the server.
-	fmt.Printf("Test server for CreateUser is lintening on :%s...", *port)
+	fmt.Printf("Test server for Admin is lintening on :%s...", *port)
 	if err := http.ListenAndServe(":"+*port, nil); err != nil {
 		t.Fatalf("Server crashed: %v", err)
 	}

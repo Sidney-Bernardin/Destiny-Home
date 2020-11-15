@@ -43,7 +43,18 @@ func Admin(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		trace string
-		users = []modelUser{}
+
+		// This data will eventually get passed into the admin template.
+		data = struct {
+			Title         string
+			AdminEndpoint string
+			Users         []modelUser
+			Authorized    bool
+			Error         string
+		}{
+			AdminEndpoint: adminEndpoint,
+			Error:         "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy",
+		}
 	)
 
 	// Derive the traceID associated with the current request.
@@ -53,15 +64,18 @@ func Admin(w http.ResponseWriter, r *http.Request) {
 		trace = fmt.Sprintf("projects/%s/traces/%s", projectID, traceParts[0])
 	}
 
-	switch r.URL.Query()["process"][0] {
+	// Use the process param to dicide what the page will do.
+	// We do it this way to minimize the number of cloud function deployed.
+	switch r.URL.Query().Get("process") {
 
 	case "link_with_bungie":
 
 		// Authenticate the login.
 		password := r.FormValue("password")
 		if password != adminPassword {
-			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-			return
+			data.Title = "login"
+			data.Authorized = false
+			break
 		}
 
 	case "home":
@@ -69,9 +83,13 @@ func Admin(w http.ResponseWriter, r *http.Request) {
 		// Authenticate the login.
 		password := r.FormValue("password")
 		if password != adminPassword {
-			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-			return
+			data.Title = "login"
+			data.Authorized = false
+			break
 		}
+
+		data.Title = "Home | Admin"
+		data.Authorized = true
 
 		// Create context for datastore.
 		ctx, cancel := context.WithTimeout(context.Background(), 9*time.Second)
@@ -93,7 +111,7 @@ func Admin(w http.ResponseWriter, r *http.Request) {
 
 		// Get all user from the database.
 		q := datastore.NewQuery("User")
-		if _, err := c.GetAll(ctx, q, &users); err != nil {
+		if _, err := c.GetAll(ctx, q, &data.Users); err != nil {
 
 			log.Println(Entry{
 				Message:  err.Error(),
@@ -104,13 +122,16 @@ func Admin(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+	default:
+
+		// Go to the login page.
+		data.Title = "Login | Admin"
+		data.Authorized = false
 	}
 
-	// Execute template and pass the users into it.
-	err := temps.ExecuteTemplate(w, "admin.html", map[string]interface{}{
-		"Users": users,
-	})
-
+	// Execute template and pass data into it.
+	err := temps.ExecuteTemplate(w, "admin.html", data)
 	if err != nil {
 
 		log.Println(Entry{
