@@ -3,9 +3,9 @@
   <div class="banner">
     
     <div class="left">
-      <div class="outline">
-        <ion-icon name="alert-outline"></ion-icon> 
-      </div>
+        <div class="outline outline1"></div>
+        <ion-icon name="alert-outline"></ion-icon>
+        <div class="outline outline2"></div>
     </div>
 
     <div class="content">
@@ -18,6 +18,15 @@
 
 {{ define "adminErrorStyle" }}
 <style>
+ion-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-45%, -50%);
+  font-size: 400%;
+  color: #8c242e;
+}
+
 h1 {
   display: flex;
   color: #fff;
@@ -59,6 +68,24 @@ p {
   margin: 0;
   width: 20%;
   height: 100%;
+}
+
+.outline {
+  position: absolute;
+  top: 25%;
+  left: 25%;
+  transform: translate(-50%, -50%);
+  border: 3px solid #8c242e;
+  width: 50%;
+  height: 50%;
+}
+
+.outline1 {
+  transform: rotate(45deg);
+}
+
+.outline2 {
+  transform: rotate(-45deg);
 }
 
 .content {

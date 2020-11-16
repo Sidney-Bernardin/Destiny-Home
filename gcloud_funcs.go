@@ -53,7 +53,6 @@ func Admin(w http.ResponseWriter, r *http.Request) {
 			Error         string
 		}{
 			AdminEndpoint: adminEndpoint,
-			Error:         "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy",
 		}
 	)
 
@@ -105,8 +104,9 @@ func Admin(w http.ResponseWriter, r *http.Request) {
 				Trace:    trace,
 			})
 
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			data.Title = "ERROR"
+			data.Error = http.StatusText(500) + ": This error has been logged."
+			break
 		}
 
 		// Get all user from the database.
@@ -119,8 +119,9 @@ func Admin(w http.ResponseWriter, r *http.Request) {
 				Trace:    trace,
 			})
 
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			data.Title = "ERROR"
+			data.Error = http.StatusText(500) + ": This error has been logged."
+			break
 		}
 
 	default:
