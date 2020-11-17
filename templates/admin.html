@@ -17,7 +17,7 @@
   {{ else if not .Authorized }}
     {{ template "adminLoginStyle" }}
   {{ else }}
-    {{ template "adminHomeStyle" }}
+    {{ template "adminHomeStyle" . }}
   {{ end }}
 </head>
 <body>

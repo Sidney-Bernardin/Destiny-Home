@@ -1,10 +1,79 @@
 {{ define "adminHome" }}
 <div class="admin-home">
+  
+  <div class="users">
+    <h1>Users</h1>
+    <ul>
+      {{ range .Users }}
+        <li>
+          <ul>
+            <li class="platform-image"></li>
+            <li><p>{{ .Username }}</p></li>
+            <li><p>{{ .Gamertag }}</p></li>
+            <li><p>{{ .MembershipType }}</p></li>
+          </ul>
+        </li>
+      {{ end }}
+    </ul>
+  </div>
 </div>
 {{ end }}
 
 {{ define "adminHomeStyle" }}
 <style>
+p {
+  position: absolute;
+  top: 50%;
+  transform: translate(0, -50%);
+}
 
+h1 {
+  color: #fff;
+  margin: 0;
+  width: 100%;
+  border-bottom: 2px solid #fff;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+  width: 100%;
+  height: 100%;
+  border-top: 13px solid #ff3b2d;
+}
+
+ul li {
+  background: rgba(255, 255, 255, 0.5);
+  margin: 0 0 5px 0;
+  padding: 0;
+  color: #fff;
+  height: 25px;
+}
+
+ul li ul {
+  margin: 0;
+  padding: 0;
+  border-top: 0 solid #000;
+}
+
+ul li ul li {
+  position: absolute;
+  display: inline-block;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+.platform-image {
+  background: #000;
+  width: 25px;
+  height: 25px;
+}
+
+.users {
+  width: 50%;
+  height: 50%;
+}
 </style>
 {{ end }}
