@@ -12,21 +12,8 @@ import (
 )
 
 var (
-	port = flag.String("port", "", "The port for the create user webhook to be tested on.")
-	see  = flag.Bool("see", false, "See the responses of the Webhook test.")
+	see = flag.Bool("see", false, "See the responses of the Webhook test.")
 )
-
-func TestAdmin(t *testing.T) {
-
-	// Handle the CreateUser function.
-	http.HandleFunc("/"+adminEndpoint, Admin)
-
-	// Start the server.
-	fmt.Printf("Test server for Admin is lintening on :%s...", *port)
-	if err := http.ListenAndServe(":"+*port, nil); err != nil {
-		t.Fatalf("Server crashed: %v", err)
-	}
-}
 
 func TestWebhook(t *testing.T) {
 
@@ -117,7 +104,7 @@ func TestWebhook(t *testing.T) {
 			}
 
 			fmt.Printf("\tresponse: %s\n", string(b))
-			fmt.Println("ending test case")
+			fmt.Printf("done\n\n\n")
 		}
 	}
 }

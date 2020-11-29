@@ -1,15 +1,11 @@
 package destinyhome
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
-	"time"
-
-	"cloud.google.com/go/datastore"
 )
 
 // Entry defines a log entry.
@@ -35,115 +31,6 @@ func (e Entry) String() string {
 	}
 
 	return string(out)
-}
-
-// Admin responds with a template allowing an administrator to login
-// and manage users.
-func Admin(w http.ResponseWriter, r *http.Request) {
-
-	var (
-		trace string
-
-		// This data will eventually get passed into the admin template.
-		data = struct {
-			Title         string
-			AdminEndpoint string
-			Users         []modelUser
-			Authorized    bool
-			Error         string
-		}{
-			AdminEndpoint: adminEndpoint,
-		}
-	)
-
-	// Derive the traceID associated with the current request.
-	traceHeader := r.Header.Get("X-Cloud-Trace-Context")
-	traceParts := strings.Split(traceHeader, "/")
-	if len(traceParts) > 0 && len(traceParts[0]) > 0 {
-		trace = fmt.Sprintf("projects/%s/traces/%s", projectID, traceParts[0])
-	}
-
-	// Use the process param to dicide what the page will do.
-	// We do it this way to minimize the number of cloud function deployed.
-	switch r.URL.Query().Get("process") {
-
-	case "link_with_bungie":
-
-		// Authenticate the login.
-		password := r.FormValue("password")
-		if password != adminPassword {
-			data.Title = "login"
-			data.Authorized = false
-			break
-		}
-
-	case "home":
-
-		// Authenticate the login.
-		password := r.FormValue("password")
-		if password != adminPassword {
-			data.Title = "login"
-			data.Authorized = false
-			break
-		}
-
-		data.Title = "Home | Admin"
-		data.Authorized = true
-
-		// Create context for datastore.
-		ctx, cancel := context.WithTimeout(context.Background(), 9*time.Second)
-		defer cancel()
-
-		// Create datastore client.
-		c, err := datastore.NewClient(ctx, projectID)
-		if err != nil {
-
-			log.Println(Entry{
-				Message:  err.Error(),
-				Severity: "CRITICAL",
-				Trace:    trace,
-			})
-
-			data.Title = "ERROR"
-			data.Error = http.StatusText(500) + ": This error has been logged."
-			break
-		}
-
-		// Get all user from the database.
-		q := datastore.NewQuery("User")
-		if _, err := c.GetAll(ctx, q, &data.Users); err != nil {
-
-			log.Println(Entry{
-				Message:  err.Error(),
-				Severity: "CRITICAL",
-				Trace:    trace,
-			})
-
-			data.Title = "ERROR"
-			data.Error = http.StatusText(500) + ": This error has been logged."
-			break
-		}
-
-	default:
-
-		// Go to the login page.
-		data.Title = "Login | Admin"
-		data.Authorized = false
-	}
-
-	// Execute template and pass data into it.
-	err := temps.ExecuteTemplate(w, "admin.html", data)
-	if err != nil {
-
-		log.Println(Entry{
-			Message:  err.Error(),
-			Severity: "CRITICAL",
-			Trace:    trace,
-		})
-
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 }
 
 func Webhook(w http.ResponseWriter, r *http.Request) {

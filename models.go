@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
+	"github.com/Sidney-Bernardin/bungo"
 )
 
 type modelUser struct {
@@ -16,13 +17,44 @@ type modelUser struct {
 }
 
 type modelCharacter struct {
+	user modelUser
+
 	ID       string
 	Loadouts []modelLoadout
 }
 
-type modelLoadout struct {
-	Type_ string
+// TODO: Finish this function.
+// getCurrentLoadout returns the characters currently equiped loadout.
+func (m *modelCharacter) getCurrentLoadout(s *bungo.Service) (*modelLoadout, error) {
 
+	call := s.Destiny2.GetCharacter(m.user.MembershipType, m.user.MembershipID, m.ID)
+	res, err := call.Components("CharacterEquipment").Do()
+	if err != nil {
+		return nil, err
+	}
+
+	bucketHashTable := map[int]string{
+		1498876634: "kinetic",
+		2465295065: "energy",
+		953998645:  "power",
+		3448274439: "head",
+		3551918588: "arms",
+		14239492:   "chest",
+		1585787867: "class-item",
+	}
+
+	var ret *modelLoadout
+
+	for _, v := range res.CharacterEquipment.Response.Equipment.Data.Items {
+		if _, ok := bucketHashTable[v.BucketHash]; !ok {
+			continue
+		}
+	}
+
+	return ret, nil
+}
+
+type modelLoadout struct {
 	SubclassID string
 
 	HeadID      string
@@ -34,6 +66,10 @@ type modelLoadout struct {
 	KineticID string
 	SpecialID string
 	HeavyID   string
+}
+
+func (m *modelCharacter) save() {
+
 }
 
 // getUser returns a user from the database given a username.
