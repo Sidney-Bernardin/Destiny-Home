@@ -13,63 +13,73 @@ type modelUser struct {
 	Gamertag       string
 	MembershipType string
 	MembershipID   string
-	Characters     []modelCharacter
+	Characters     []*modelCharacter
 }
 
 type modelCharacter struct {
 	user modelUser
 
 	ID       string
-	Loadouts []modelLoadout
+	Loadouts []map[string]*modelItem
 }
 
-// TODO: Finish this function.
 // getCurrentLoadout returns the characters currently equiped loadout.
-func (m *modelCharacter) getCurrentLoadout(s *bungo.Service) (*modelLoadout, error) {
+func (m *modelCharacter) getCurrentLoadout(s *bungo.Service) (map[string]*modelItem, error) {
 
+	// Use bungo to get the character equipment.
 	call := s.Destiny2.GetCharacter(m.user.MembershipType, m.user.MembershipID, m.ID)
 	res, err := call.Components("CharacterEquipment").Do()
 	if err != nil {
 		return nil, err
 	}
 
-	bucketHashTable := map[int]string{
-		1498876634: "kinetic",
-		2465295065: "energy",
-		953998645:  "power",
-		3448274439: "head",
-		3551918588: "arms",
-		14239492:   "chest",
-		1585787867: "class-item",
-	}
-
-	var ret *modelLoadout
-
+	// Convert the response into a modelLoadout.
+	ret := map[string]*modelItem{}
 	for _, v := range res.CharacterEquipment.Response.Equipment.Data.Items {
-		if _, ok := bucketHashTable[v.BucketHash]; !ok {
-			continue
+
+		switch v.BucketHash {
+
+		case 1498876634: // <-- Kinetic.
+			ret["kinetic"] = &modelItem{}
+			ret["kinetic"].ItemHash = v.ItemHash
+			ret["kinetic"].ItemInstanceID = v.ItemInstanceID
+		case 2465295065: // <-- Energy.
+			ret["energy"] = &modelItem{}
+			ret["energy"].ItemHash = v.ItemHash
+			ret["energy"].ItemInstanceID = v.ItemInstanceID
+		case 953998645: // <-- Power.
+			ret["power"] = &modelItem{}
+			ret["power"].ItemHash = v.ItemHash
+			ret["power"].ItemInstanceID = v.ItemInstanceID
+		case 3448274439: // <-- Head.
+			ret["head"] = &modelItem{}
+			ret["head"].ItemHash = v.ItemHash
+			ret["head"].ItemInstanceID = v.ItemInstanceID
+		case 3551918588: // <-- Arms.
+			ret["arms"] = &modelItem{}
+			ret["arms"].ItemHash = v.ItemHash
+			ret["arms"].ItemInstanceID = v.ItemInstanceID
+		case 14239492: // <-- Chest.
+			ret["chest"] = &modelItem{}
+			ret["chest"].ItemHash = v.ItemHash
+			ret["chest"].ItemInstanceID = v.ItemInstanceID
+		case 20886954: // <-- Legs.
+			ret["legs"] = &modelItem{}
+			ret["legs"].ItemHash = v.ItemHash
+			ret["legs"].ItemInstanceID = v.ItemInstanceID
+		case 1585787867: // <-- Class-Item.
+			ret["class item"] = &modelItem{}
+			ret["class item"].ItemHash = v.ItemHash
+			ret["class item"].ItemInstanceID = v.ItemInstanceID
 		}
 	}
 
 	return ret, nil
 }
 
-type modelLoadout struct {
-	SubclassID string
-
-	HeadID      string
-	ArmsID      string
-	ChestID     string
-	LegsID      string
-	ClassItemID string
-
-	KineticID string
-	SpecialID string
-	HeavyID   string
-}
-
-func (m *modelCharacter) save() {
-
+type modelItem struct {
+	ItemHash       int
+	ItemInstanceID string
 }
 
 // getUser returns a user from the database given a username.
@@ -99,9 +109,15 @@ func getUser(username string) (*modelUser, error) {
 		return nil, err
 	}
 
+	// Check if a user  was found.
 	if len(users) == 0 {
 		return nil, errUserNotFound
 	}
 
+	// Return the user.
+	user := users[0]
+	user.Characters[0].user = user
+	user.Characters[1].user = user
+	user.Characters[2].user = user
 	return &users[0], nil
 }
