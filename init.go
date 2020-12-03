@@ -23,4 +23,6 @@ func init() {
 	// Setup environment variables.
 	apiKey = os.Getenv("BUNGIE_API_KEY")
 	projectID = os.Getenv("PROJECT_ID")
+	clientID = os.Getenv("CLIENT_ID")
+	clientSecret = os.Getenv("CLIENT_SECRET")
 }

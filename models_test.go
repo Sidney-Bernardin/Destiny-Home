@@ -17,7 +17,7 @@ func TestGetCurrentLoadout(t *testing.T) {
 
 	// Create a character for the user.
 	user.Characters = append(user.Characters, &modelCharacter{
-		user: user,
+		user: &user,
 
 		ID: "2305843009294908257",
 	})

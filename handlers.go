@@ -27,6 +27,22 @@ func processRequest(req *webhookRequest, res *webhookResponse) error {
 
 		// Setup the response.
 		res.Prompt.FirstSimple.Speech = fmt.Sprintf("Your %s is %s", bucket, item)
+
+	case "equip_item":
+
+		// Get params.
+		username := req.Intent.Params["username"].Resolved
+		bucket := req.Intent.Params["bucket"].Resolved
+		guardianIndex := req.Intent.Params["guardian_index"].Resolved
+		itemName := req.Intent.Params["item_name"].Resolved
+
+		// Equip the item.
+		if err := equipItem(username, bucket, guardianIndex, itemName); err != nil {
+			return err
+		}
+
+		// Setup the response.
+		res.Prompt.FirstSimple.Speech = fmt.Sprintf("Done equiping the %s!", itemName)
 	}
 
 	// Setup common response fields.
@@ -56,6 +72,7 @@ func getEquipedItem(username, bucket, guardianIndex string) (string, error) {
 		return "", err
 	}
 
+	// Get the currently equiped loadout.
 	res, err := user.Characters[number].getCurrentLoadout(s)
 	if err != nil {
 		return "", err
@@ -70,4 +87,27 @@ func getEquipedItem(username, bucket, guardianIndex string) (string, error) {
 
 	// Return the name of the item.
 	return res2.Response.DisplayProperties.Name, nil
+}
+
+func equipItem(username, bucket, guardianIndex, itemName string) error {
+	/*
+		// Get the user given the username.
+		user, err := getUser(username)
+		if err != nil {
+			return err
+		}
+
+		// Create bungo service.
+		s, err := bungo.NewService(&http.Client{}, apiKey)
+		if err != nil {
+			return err
+		}
+
+		// Convert the guardianIndex into an int.
+		number, err := strconv.Atoi(guardianIndex)
+		if err != nil {
+			return err
+		}
+	*/
+	return nil
 }
