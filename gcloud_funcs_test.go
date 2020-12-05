@@ -3,16 +3,11 @@ package destinyhome
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-)
-
-var (
-	see = flag.Bool("see", false, "See the responses of the Webhook test.")
 )
 
 func TestWebhook(t *testing.T) {
@@ -22,36 +17,20 @@ func TestWebhook(t *testing.T) {
 		handler string
 		params  map[string]param
 	}{
-		{
+		/*{
 			handler: "get_equiped_item",
 			params: map[string]param{
 				"username":       {Resolved: "Sydney"},
 				"bucket":         {Resolved: "head"},
 				"guardian_index": {Resolved: "1"},
 			},
-		},
+		},*/
 		{
-			handler: "get_equiped_item",
+			handler: "equip_item",
 			params: map[string]param{
 				"username":       {Resolved: "Sydney"},
-				"bucket":         {Resolved: "chest"},
-				"guardian_index": {Resolved: "0"},
-			},
-		},
-		{
-			handler: "get_equiped_item",
-			params: map[string]param{
-				"username":       {Resolved: "Sydney"},
-				"bucket":         {Resolved: "legs"},
 				"guardian_index": {Resolved: "2"},
-			},
-		},
-		{
-			handler: "get_equiped_item",
-			params: map[string]param{
-				"username":       {Resolved: "Sydney"},
-				"bucket":         {Resolved: "arms"},
-				"guardian_index": {Resolved: "1"},
+				"item_name":      {Resolved: "The Last Word"},
 			},
 		},
 	}

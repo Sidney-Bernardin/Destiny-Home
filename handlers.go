@@ -32,17 +32,16 @@ func processRequest(req *webhookRequest, res *webhookResponse) error {
 
 		// Get params.
 		username := req.Intent.Params["username"].Resolved
-		bucket := req.Intent.Params["bucket"].Resolved
 		guardianIndex := req.Intent.Params["guardian_index"].Resolved
 		itemName := req.Intent.Params["item_name"].Resolved
 
 		// Equip the item.
-		if err := equipItem(username, bucket, guardianIndex, itemName); err != nil {
+		if err := equipItem(username, guardianIndex, itemName); err != nil {
 			return err
 		}
 
 		// Setup the response.
-		res.Prompt.FirstSimple.Speech = fmt.Sprintf("Done equiping the %s!", itemName)
+		res.Prompt.FirstSimple.Speech = fmt.Sprintf("Done equiping %s!", itemName)
 	}
 
 	// Setup common response fields.
@@ -89,25 +88,40 @@ func getEquipedItem(username, bucket, guardianIndex string) (string, error) {
 	return res2.Response.DisplayProperties.Name, nil
 }
 
-func equipItem(username, bucket, guardianIndex, itemName string) error {
-	/*
-		// Get the user given the username.
-		user, err := getUser(username)
+func equipItem(username, guardianIndex, itemName string) error {
+
+	// Get the user given the username.
+	user, err := getUser(username)
+	if err != nil {
+		return err
+	}
+
+	// Create bungo service.
+	s, err := bungo.NewService(&http.Client{}, apiKey)
+	if err != nil {
+		return err
+	}
+
+	// Convert the guardianIndex into an int.
+	number, err := strconv.Atoi(guardianIndex)
+	if err != nil {
+		return err
+	}
+
+	for k := range gearHashMap {
+
+		bucket, err := user.Characters[number].getBucket(s, k)
 		if err != nil {
 			return err
 		}
 
-		// Create bungo service.
-		s, err := bungo.NewService(&http.Client{}, apiKey)
+		err = user.Characters[number].equipItem(s, bucket[0].ItemInstanceID)
 		if err != nil {
 			return err
 		}
 
-		// Convert the guardianIndex into an int.
-		number, err := strconv.Atoi(guardianIndex)
-		if err != nil {
-			return err
-		}
-	*/
-	return nil
+		return nil
+	}
+
+	return errCouldntFindItem
 }

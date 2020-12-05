@@ -25,4 +25,11 @@ func init() {
 	projectID = os.Getenv("PROJECT_ID")
 	clientID = os.Getenv("CLIENT_ID")
 	clientSecret = os.Getenv("CLIENT_SECRET")
+
+	testMemType = os.Getenv("TEST_MEM_TYPE")
+	testMemID = os.Getenv("TEST_MEM_ID")
+	testItemID = os.Getenv("TEST_ITEM_ID")
+	testAccessToken = os.Getenv("TEST_ACCESS_TOKEN")
+	testRefreshToken = os.Getenv("TEST_REFRESH_TOKEN")
+	testCharacterID = os.Getenv("TEST_CHARACTER_ID")
 }

@@ -63,6 +63,10 @@ func Webhook(w http.ResponseWriter, r *http.Request) {
 			res.Prompt.FirstSimple.Speech = `I couldn't find you in my database.`
 			w.WriteHeader(http.StatusNotFound)
 
+		case errCouldntFindItem:
+			res.Prompt.FirstSimple.Speech = `I couldn't find that item.`
+			w.WriteHeader(http.StatusNotFound)
+
 		default:
 
 			log.Println(Entry{

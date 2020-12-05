@@ -81,6 +81,7 @@ func (m *modelUser) refresh() error {
 	return nil
 }
 
+// save updates the user in the database.
 func (m *modelUser) save() error {
 
 	// Create context for datastore.
@@ -113,7 +114,7 @@ type modelCharacter struct {
 }
 
 // getCurrentLoadout returns the characters currently equiped loadout.
-func (m *modelCharacter) getCurrentLoadout(s *bungo.Service) (map[string]*modelItem, error) {
+func (m *modelCharacter) getCurrentLoadout(s *bungo.Service) (map[string]modelItem, error) {
 
 	// Use bungo to get the character equipment.
 	call := s.Destiny2.GetCharacter(m.user.MembershipType, m.user.MembershipID, m.ID)
@@ -122,44 +123,20 @@ func (m *modelCharacter) getCurrentLoadout(s *bungo.Service) (map[string]*modelI
 		return nil, err
 	}
 
-	// Convert the response into a modelLoadout.
-	ret := map[string]*modelItem{}
+	// range over the response items.
+	ret := map[string]modelItem{}
 	for _, v := range res.CharacterEquipment.Response.Equipment.Data.Items {
 
-		switch v.BucketHash {
+		// Loop over the grear hash map.
+		for bucketName, bucketHash := range gearHashMap {
+			if v.BucketHash == bucketHash {
 
-		case 1498876634: // <-- Kinetic.
-			ret["kinetic"] = &modelItem{}
-			ret["kinetic"].ItemHash = v.ItemHash
-			ret["kinetic"].ItemInstanceID = v.ItemInstanceID
-		case 2465295065: // <-- Energy.
-			ret["energy"] = &modelItem{}
-			ret["energy"].ItemHash = v.ItemHash
-			ret["energy"].ItemInstanceID = v.ItemInstanceID
-		case 953998645: // <-- Power.
-			ret["power"] = &modelItem{}
-			ret["power"].ItemHash = v.ItemHash
-			ret["power"].ItemInstanceID = v.ItemInstanceID
-		case 3448274439: // <-- Head.
-			ret["head"] = &modelItem{}
-			ret["head"].ItemHash = v.ItemHash
-			ret["head"].ItemInstanceID = v.ItemInstanceID
-		case 3551918588: // <-- Arms.
-			ret["arms"] = &modelItem{}
-			ret["arms"].ItemHash = v.ItemHash
-			ret["arms"].ItemInstanceID = v.ItemInstanceID
-		case 14239492: // <-- Chest.
-			ret["chest"] = &modelItem{}
-			ret["chest"].ItemHash = v.ItemHash
-			ret["chest"].ItemInstanceID = v.ItemInstanceID
-		case 20886954: // <-- Legs.
-			ret["legs"] = &modelItem{}
-			ret["legs"].ItemHash = v.ItemHash
-			ret["legs"].ItemInstanceID = v.ItemInstanceID
-		case 1585787867: // <-- Class-Item.
-			ret["class item"] = &modelItem{}
-			ret["class item"].ItemHash = v.ItemHash
-			ret["class item"].ItemInstanceID = v.ItemInstanceID
+				// Set the item.
+				ret[bucketName] = modelItem{
+					ItemHash:       v.ItemHash,
+					ItemInstanceID: v.ItemInstanceID,
+				}
+			}
 		}
 	}
 
@@ -167,7 +144,7 @@ func (m *modelCharacter) getCurrentLoadout(s *bungo.Service) (map[string]*modelI
 }
 
 // getBucket returns the items in a bucket of this character.
-func (m *modelCharacter) getBucket(s *bungo.Service, bucket string) ([]string, error) {
+func (m *modelCharacter) getBucket(s *bungo.Service, bucket string) ([]modelItem, error) {
 
 	// Get the Character.
 	call := s.Destiny2.GetCharacter(m.user.MembershipType, m.user.MembershipID, m.ID).
@@ -185,11 +162,6 @@ func (m *modelCharacter) getBucket(s *bungo.Service, bucket string) ([]string, e
 			return nil, err
 		}
 
-		// Save the user now that the token has been refreshed.
-		if err := m.user.save(); err != nil {
-			return nil, err
-		}
-
 		// Try to get the character again.
 		call := s.Destiny2.GetCharacter(m.user.MembershipType, m.user.MembershipID, m.ID).
 			Components("201")
@@ -200,31 +172,21 @@ func (m *modelCharacter) getBucket(s *bungo.Service, bucket string) ([]string, e
 		}
 	}
 
-	// Create a hash map for the bucket hashes.
-	hashMap := map[string]int{
-		"kinetic":    1498876634,
-		"energy":     2465295065,
-		"power":      953998645,
-		"head":       3448274439,
-		"arms":       3551918588,
-		"chest":      14239492,
-		"legs":       20886954,
-		"class item": 1585787867,
-	}
-
 	// Conver the given bucket into its hash.
-	bucketHash, ok := hashMap[bucket]
+	bucketHash, ok := gearHashMap[bucket]
 	if !ok {
 		return nil, errors.New("bad bucket")
 	}
 
 	// Range over the characters items.
-	var ret []string
+	var ret []modelItem
 	for _, v := range res.CharacterInventories.Response.Inventory.Data.Items {
+
 		if v.BucketHash != bucketHash {
 			continue
 		}
 
+		// Get the item's entity definition to get its name.
 		res, err := s.Destiny2.GetDestinyEntityDefinition(
 			"DestinyInventoryItemDefinition",
 			strconv.Itoa(v.ItemHash),
@@ -234,13 +196,55 @@ func (m *modelCharacter) getBucket(s *bungo.Service, bucket string) ([]string, e
 			return nil, err
 		}
 
-		ret = append(ret, res.Response.DisplayProperties.Name)
+		// Add the item to ret.
+		ret = append(ret, modelItem{
+			Name:           res.Response.DisplayProperties.Name,
+			ItemHash:       v.ItemHash,
+			ItemInstanceID: v.ItemInstanceID,
+		})
 	}
 
 	return ret, nil
 }
 
+func (m *modelCharacter) equipItem(s *bungo.Service, itemInstanceID string) error {
+
+	// Create the request body.
+	data := &bungo.ItemActionRequest{
+		ItemId:         itemInstanceID,
+		CharacterId:    m.ID,
+		MembershipType: m.user.MembershipType,
+	}
+
+	// Equip the item.
+	call := s.Destiny2.EquipItem(data)
+	call.Header().Add("Authorization", "Bearer "+m.user.AccessToken)
+	_, err := call.Do()
+	if err != nil {
+
+		if err != bungo.ErrUnauthorized {
+			return err
+		}
+
+		// Refresh the access token.
+		if err := m.user.refresh(); err != nil {
+			return err
+		}
+
+		// Try to equip the item again.
+		call := s.Destiny2.EquipItem(data)
+		call.Header().Add("Authorization", "Bearer "+m.user.AccessToken)
+		_, err = call.Do()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 type modelItem struct {
+	Name           string
 	ItemHash       int
 	ItemInstanceID string
 }
@@ -282,5 +286,6 @@ func getUser(username string) (*modelUser, error) {
 	user.Characters[0].user = &user
 	user.Characters[1].user = &user
 	user.Characters[2].user = &user
+
 	return &user, nil
 }
