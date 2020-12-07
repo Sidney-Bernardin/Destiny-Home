@@ -26,10 +26,13 @@ func init() {
 	clientID = os.Getenv("CLIENT_ID")
 	clientSecret = os.Getenv("CLIENT_SECRET")
 
+	testUsername = os.Getenv("TEST_USERNAME")
 	testMemType = os.Getenv("TEST_MEM_TYPE")
 	testMemID = os.Getenv("TEST_MEM_ID")
+	testItemName = os.Getenv("TEST_ITEM_NAME")
 	testItemID = os.Getenv("TEST_ITEM_ID")
 	testAccessToken = os.Getenv("TEST_ACCESS_TOKEN")
 	testRefreshToken = os.Getenv("TEST_REFRESH_TOKEN")
 	testCharacterID = os.Getenv("TEST_CHARACTER_ID")
+	testCharacterIndex = os.Getenv("TEST_CHARACTER_INDEX")
 }

@@ -3,7 +3,6 @@ package destinyhome
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -13,6 +12,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"github.com/Sidney-Bernardin/bungo"
+	"github.com/pkg/errors"
 )
 
 type modelUser struct {
@@ -29,6 +29,8 @@ type modelUser struct {
 // refresh refreshes the users access token.
 func (m *modelUser) refresh() error {
 
+	const operation = "modelUser.refresh"
+
 	// Create the url.
 	url_ := "https://www.bungie.net/platform/app/oauth/token"
 
@@ -42,7 +44,7 @@ func (m *modelUser) refresh() error {
 	// Create request.
 	req, err := http.NewRequest("POST", url_, strings.NewReader(data.Encode()))
 	if err != nil {
-		return err
+		return errors.Wrap(err, operation+": creating request failed")
 	}
 
 	// Add request headers.
@@ -52,13 +54,14 @@ func (m *modelUser) refresh() error {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return err
+		return errors.Wrap(err, operation+": doing request failed")
 	}
 	defer res.Body.Close()
 
 	// Check the status code.
 	if res.StatusCode != 200 {
-		return errors.New("not 200, got " + http.StatusText(res.StatusCode))
+		err := errors.New(http.StatusText(res.StatusCode))
+		return errors.Wrap(err, operation+": not 200")
 	}
 
 	// Decode the response body.
@@ -71,7 +74,7 @@ func (m *modelUser) refresh() error {
 
 	// Put response into a map.
 	if err := json.Unmarshal(body, &x); err != nil {
-		return err
+		return errors.Wrap(err, operation+": unmarshal failed")
 	}
 
 	// Set the new access and refresh tokens.
@@ -84,6 +87,8 @@ func (m *modelUser) refresh() error {
 // save updates the user in the database.
 func (m *modelUser) save() error {
 
+	const operation = "modelUser.save"
+
 	// Create context for datastore.
 	ctx, cancel := context.WithTimeout(
 		context.Background(),
@@ -94,13 +99,13 @@ func (m *modelUser) save() error {
 	// Create datastore client.
 	c, err := datastore.NewClient(ctx, projectID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, operation+": new datastore client failed")
 	}
 
 	// Update the user.
-	key := datastore.IncompleteKey("User", nil)
+	key := datastore.NameKey("User", m.Username, nil)
 	if _, err := c.Put(ctx, key, m); err != nil {
-		return err
+		return errors.Wrap(err, operation+": put user failed")
 	}
 
 	return nil
@@ -116,11 +121,13 @@ type modelCharacter struct {
 // getCurrentLoadout returns the characters currently equiped loadout.
 func (m *modelCharacter) getCurrentLoadout(s *bungo.Service) (map[string]modelItem, error) {
 
+	const operation = "modelCharacter.getCurrentLoadout"
+
 	// Use bungo to get the character equipment.
 	call := s.Destiny2.GetCharacter(m.user.MembershipType, m.user.MembershipID, m.ID)
 	res, err := call.Components("CharacterEquipment").Do()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, operation+": get character failed")
 	}
 
 	// range over the response items.
@@ -146,6 +153,8 @@ func (m *modelCharacter) getCurrentLoadout(s *bungo.Service) (map[string]modelIt
 // getBucket returns the items in a bucket of this character.
 func (m *modelCharacter) getBucket(s *bungo.Service, bucket string) ([]modelItem, error) {
 
+	const operation = "modelCharacter.getBucket"
+
 	// Get the Character.
 	call := s.Destiny2.GetCharacter(m.user.MembershipType, m.user.MembershipID, m.ID).
 		Components("201")
@@ -154,12 +163,12 @@ func (m *modelCharacter) getBucket(s *bungo.Service, bucket string) ([]modelItem
 	if err != nil {
 
 		if err != bungo.ErrUnauthorized {
-			return nil, err
+			return nil, errors.Wrap(err, operation+": get character failed")
 		}
 
 		// Refresh the access token.
 		if err := m.user.refresh(); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, operation+": refreshing token failed")
 		}
 
 		// Try to get the character again.
@@ -168,14 +177,15 @@ func (m *modelCharacter) getBucket(s *bungo.Service, bucket string) ([]modelItem
 		call.Header().Add("Authorization", "Bearer "+m.user.AccessToken)
 		res, err = call.Do()
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, operation+": get character failed")
 		}
 	}
 
-	// Conver the given bucket into its hash.
+	// Convert the given bucket into its hash.
 	bucketHash, ok := gearHashMap[bucket]
 	if !ok {
-		return nil, errors.New("bad bucket")
+		err := errors.New("bad bucket")
+		return nil, errors.Wrap(err, operation+": convert to hash failed")
 	}
 
 	// Range over the characters items.
@@ -193,7 +203,7 @@ func (m *modelCharacter) getBucket(s *bungo.Service, bucket string) ([]modelItem
 		).Do()
 
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, operation+": get item definition failed")
 		}
 
 		// Add the item to ret.
@@ -209,6 +219,8 @@ func (m *modelCharacter) getBucket(s *bungo.Service, bucket string) ([]modelItem
 
 func (m *modelCharacter) equipItem(s *bungo.Service, itemInstanceID string) error {
 
+	const operation = "modelCharacter.equipItem"
+
 	// Create the request body.
 	data := &bungo.ItemActionRequest{
 		ItemId:         itemInstanceID,
@@ -223,12 +235,19 @@ func (m *modelCharacter) equipItem(s *bungo.Service, itemInstanceID string) erro
 	if err != nil {
 
 		if err != bungo.ErrUnauthorized {
-			return err
+
+			if _, ok := err.(*bungo.BungoError); ok {
+				if err.(*bungo.BungoError).ErrorCode == 1641 {
+					return errOnlyOneAllowed
+				}
+			}
+
+			return errors.Wrap(err, operation+": equip item failed")
 		}
 
 		// Refresh the access token.
 		if err := m.user.refresh(); err != nil {
-			return err
+			return errors.Wrap(err, operation+": user refresh failed")
 		}
 
 		// Try to equip the item again.
@@ -236,7 +255,14 @@ func (m *modelCharacter) equipItem(s *bungo.Service, itemInstanceID string) erro
 		call.Header().Add("Authorization", "Bearer "+m.user.AccessToken)
 		_, err = call.Do()
 		if err != nil {
-			return err
+
+			if _, ok := err.(*bungo.BungoError); ok {
+				if err.(*bungo.BungoError).ErrorCode == 1641 {
+					return errOnlyOneAllowed
+				}
+			}
+
+			return errors.Wrap(err, operation+": equip item failed after refresh")
 		}
 	}
 
@@ -252,6 +278,8 @@ type modelItem struct {
 // getUser returns a user from the database given a username.
 func getUser(username string) (*modelUser, error) {
 
+	const operation = "getUser"
+
 	// Create context for datastore.
 	ctx, cancel := context.WithTimeout(
 		context.Background(),
@@ -262,7 +290,7 @@ func getUser(username string) (*modelUser, error) {
 	// Create datastore client.
 	c, err := datastore.NewClient(ctx, projectID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, operation+": new datastore client failed")
 	}
 
 	// Create a query to get the user..
@@ -273,7 +301,7 @@ func getUser(username string) (*modelUser, error) {
 	var users []modelUser
 	_, err = c.GetAll(ctx, query, &users)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, operation+": get all users failed")
 	}
 
 	// Check if a user  was found.

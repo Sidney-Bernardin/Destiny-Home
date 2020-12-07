@@ -6,13 +6,16 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // Entry defines a log entry.
 type Entry struct {
-	Message  string `json:"message"`
-	Severity string `json:"severity,omitempty"`
-	Trace    string `json:"logging.googleapis.com/trace,omitempty"`
+	Message   string `json:"message"`
+	Severity  string `json:"severity,omitempty"`
+	Operation string `json:"operation"`
+	Trace     string `json:"logging.googleapis.com/trace,omitempty"`
 
 	// Cloud Log Viewer allows filtering and display of this as `jsonPayload.component`.
 	Component string `json:"component,omitempty"`
@@ -57,7 +60,7 @@ func Webhook(w http.ResponseWriter, r *http.Request) {
 	// Process the request.
 	if err := processRequest(&req, &res); err != nil {
 
-		switch err {
+		switch errors.Cause(err) {
 
 		case errUserNotFound:
 			res.Prompt.FirstSimple.Speech = `I couldn't find you in my database.`
@@ -67,12 +70,17 @@ func Webhook(w http.ResponseWriter, r *http.Request) {
 			res.Prompt.FirstSimple.Speech = `I couldn't find that item.`
 			w.WriteHeader(http.StatusNotFound)
 
+		case errOnlyOneAllowed:
+			res.Prompt.FirstSimple.Speech = `You can only have one item of this type equipped.`
+			w.WriteHeader(http.StatusNotFound)
+
 		default:
 
 			log.Println(Entry{
-				Message:  err.Error(),
-				Severity: "CRITICAL",
-				Trace:    trace,
+				Message:   errors.Cause(err).Error(),
+				Severity:  "CRITICAL",
+				Operation: err.Error(),
+				Trace:     trace,
 			})
 
 			res.Prompt.FirstSimple.Speech = `My backend systems are not working right now, try again later.`
@@ -99,6 +107,5 @@ func Webhook(w http.ResponseWriter, r *http.Request) {
 	// Respond.
 	_, err = w.Write(js)
 	if err != nil {
-
 	}
 }

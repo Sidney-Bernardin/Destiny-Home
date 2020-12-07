@@ -8,13 +8,16 @@ var (
 	clientID     string
 	clientSecret string
 
-	see              = flag.Bool("see", false, "See the responses of the unit tests.")
-	testMemType      string
-	testMemID        string
-	testItemID       string
-	testAccessToken  string
-	testRefreshToken string
-	testCharacterID  string
+	see                = flag.Bool("see", false, "See the responses of the unit tests.")
+	testUsername       string
+	testMemType        string
+	testMemID          string
+	testItemName       string
+	testItemID         string
+	testAccessToken    string
+	testRefreshToken   string
+	testCharacterID    string
+	testCharacterIndex string
 
 	gearHashMap = map[string]int{
 		"kinetic":    1498876634,

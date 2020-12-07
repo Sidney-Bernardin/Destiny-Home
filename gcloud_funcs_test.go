@@ -28,9 +28,9 @@ func TestWebhook(t *testing.T) {
 		{
 			handler: "equip_item",
 			params: map[string]param{
-				"username":       {Resolved: "Sydney"},
-				"guardian_index": {Resolved: "2"},
-				"item_name":      {Resolved: "The Last Word"},
+				"username":       {Resolved: testUsername},
+				"guardian_index": {Resolved: testCharacterIndex},
+				"item_name":      {Resolved: testItemName},
 			},
 		},
 	}
