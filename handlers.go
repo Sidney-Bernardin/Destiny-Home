@@ -57,7 +57,6 @@ func processRequest(req *webhookRequest, res *webhookResponse) error {
 }
 
 func handleGetEquipedItem(username, bucket, guardianIndex string) (string, error) {
-
 	const operation = "handleGetEquipedItem"
 
 	// Get the user given the username.
@@ -117,42 +116,64 @@ func handleEquipItem(username, guardianIndex, itemName string) error {
 		return errors.Wrap(err, operation+": string to int failed")
 	}
 
+	successChan := make(chan struct{})
+	errChan := make(chan error)
+	notFoundChan := make(chan struct{})
+
 	for k := range gearHashMap {
 
-		// Get the items from the bucket.
-		bucket, err := user.Characters[number].getBucket(s, k)
-		if err != nil {
-			return errors.Wrap(err, operation+": getting bucket failed")
-		}
+		go func(k string) {
 
-		// Convert bucket into a slice of the item names.
-		names := []string{}
-		for _, v := range bucket {
-			names = append(names, strings.ToLower(v.Name))
-		}
+			// Get the items from the bucket.
+			bucket, err := user.Characters[number].getBucket(s, k)
+			if err != nil {
+				errChan <- errors.Wrap(err, operation+": getting bucket failed")
+				return
+			}
 
-		// Fuzzy search for the item.
-		res := fuzzy.Find(strings.ToLower(itemName), names)
-		if len(res) == 0 {
-			continue
-		}
+			// Convert bucket into a slice of the item names.
+			names := []string{}
+			for _, v := range bucket {
+				names = append(names, strings.ToLower(v.Name))
+			}
 
-		// Equip the item.
-		for i := range bucket {
-			if strings.ToLower(bucket[i].Name) == res[0] {
+			// Fuzzy search for the item.
+			res := fuzzy.Find(strings.ToLower(itemName), names)
+			if len(res) == 0 {
+				notFoundChan <- struct{}{}
+				return
+			}
 
-				err = user.Characters[number].equipItem(s, bucket[i].ItemInstanceID)
-				if err != nil {
-					return errors.Wrap(err, operation+": equip item failed")
-				}
+			// Equip the item.
+			for i := range bucket {
+				if strings.ToLower(bucket[i].Name) == res[0] {
 
-				if err := user.save(); err != nil {
-					return errors.Wrap(err, operation+": save user failed")
+					err = user.Characters[number].equipItem(s, bucket[i].ItemInstanceID)
+					if err != nil {
+						errChan <- errors.Wrap(err, operation+": equip item failed")
+						return
+					}
+
+					if err := user.save(); err != nil {
+						errChan <- errors.Wrap(err, operation+": save user failed")
+						return
+					}
+
+					successChan <- struct{}{}
 				}
 			}
-		}
+		}(k)
+	}
 
-		return nil
+	for _ = range gearHashMap {
+		select {
+		case _ = <-successChan:
+			return nil
+		case err := <-errChan:
+			return err
+		case _ = <-notFoundChan:
+			continue
+		}
 	}
 
 	return errCouldntFindItem

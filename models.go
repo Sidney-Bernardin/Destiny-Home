@@ -188,30 +188,49 @@ func (m *modelCharacter) getBucket(s *bungo.Service, bucket string) ([]modelItem
 		return nil, errors.Wrap(err, operation+": convert to hash failed")
 	}
 
+	errChan := make(chan error)
+	continueChan := make(chan struct{})
+
 	// Range over the characters items.
 	var ret []modelItem
 	for _, v := range res.CharacterInventories.Response.Inventory.Data.Items {
 
-		if v.BucketHash != bucketHash {
+		go func(v bungo.SingleComponentResponseOfDestinyInventoryComponentItem) {
+
+			if v.BucketHash != bucketHash {
+				continueChan <- struct{}{}
+				return
+			}
+
+			// Get the item's entity definition to get its name.
+			res, err := s.Destiny2.GetDestinyEntityDefinition(
+				"DestinyInventoryItemDefinition",
+				strconv.Itoa(v.ItemHash),
+			).Do()
+
+			if err != nil {
+				errChan <- errors.Wrap(err, operation+": get item definition failed")
+				return
+			}
+
+			// Add the item to ret.
+			ret = append(ret, modelItem{
+				Name:           res.Response.DisplayProperties.Name,
+				ItemHash:       v.ItemHash,
+				ItemInstanceID: v.ItemInstanceID,
+			})
+
+			continueChan <- struct{}{}
+		}(v)
+	}
+
+	for range res.CharacterInventories.Response.Inventory.Data.Items {
+		select {
+		case err := <-errChan:
+			return nil, err
+		case _ = <-continueChan:
 			continue
 		}
-
-		// Get the item's entity definition to get its name.
-		res, err := s.Destiny2.GetDestinyEntityDefinition(
-			"DestinyInventoryItemDefinition",
-			strconv.Itoa(v.ItemHash),
-		).Do()
-
-		if err != nil {
-			return nil, errors.Wrap(err, operation+": get item definition failed")
-		}
-
-		// Add the item to ret.
-		ret = append(ret, modelItem{
-			Name:           res.Response.DisplayProperties.Name,
-			ItemHash:       v.ItemHash,
-			ItemInstanceID: v.ItemInstanceID,
-		})
 	}
 
 	return ret, nil

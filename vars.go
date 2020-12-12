@@ -21,7 +21,7 @@ var (
 
 	gearHashMap = map[string]int{
 		"kinetic":    1498876634,
-		"energy":     2465295065,
+		"special":    2465295065,
 		"power":      953998645,
 		"head":       3448274439,
 		"arms":       3551918588,

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/Sidney-Bernardin/bungo"
 )
@@ -96,15 +97,20 @@ func TestGetBucket(t *testing.T) {
 	// Loop over the gear hash map to get all the buckets.
 	for bucket := range gearHashMap {
 
+		// Start timer.
+		start := time.Now()
+
 		// Get the bucket.
 		res, err := user.Characters[0].getBucket(s, bucket)
 		if err != nil {
 			t.Fatalf("couldn't get bucket: %v", err)
 		}
 
+		final := time.Since(start)
+
 		// Print the response.
 		if *see {
-			fmt.Printf("%s: %v\n\n", bucket, res)
+			fmt.Printf("(time: %v) %s: %v\n\n", final, bucket, res)
 		}
 	}
 }

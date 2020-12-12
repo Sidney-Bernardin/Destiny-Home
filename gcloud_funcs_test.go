@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestWebhook(t *testing.T) {
@@ -64,7 +65,9 @@ func TestWebhook(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		// Run the function.
+		start := time.Now()
 		Webhook(rec, r)
+		finalTime := time.Since(start)
 
 		// Get the response.
 		res := rec.Result()
@@ -83,7 +86,7 @@ func TestWebhook(t *testing.T) {
 			}
 
 			fmt.Printf("\tresponse: %s\n", string(b))
-			fmt.Printf("done\n\n\n")
+			fmt.Printf("done in %s \n\n\n", finalTime)
 		}
 	}
 }
