@@ -47,6 +47,21 @@ func processRequest(req *webhookRequest, res *webhookResponse) error {
 
 		// Setup the response.
 		res.Prompt.FirstSimple.Speech = fmt.Sprintf("Done equiping %s!", itemName)
+
+	case "save_loadout":
+
+		// Get params.
+		username := req.Intent.Params["username"].Resolved
+		guardianIndex := req.Intent.Params["guardian_index"].Resolved
+		loadoutName := req.Intent.Params["loadout_name"].Resolved
+
+		// Equip the item.
+		if err := saveLoadout(username, guardianIndex, loadoutName); err != nil {
+			return errors.Wrap(err, operation+": handle save loadout item failed")
+		}
+
+		// Setup the response.
+		res.Prompt.FirstSimple.Speech = fmt.Sprintf("Saved %s!", loadoutName)
 	}
 
 	// Setup common response fields.
@@ -165,7 +180,7 @@ func handleEquipItem(username, guardianIndex, itemName string) error {
 		}(k)
 	}
 
-	for _ = range gearHashMap {
+	for range gearHashMap {
 		select {
 		case _ = <-successChan:
 			return nil
@@ -177,4 +192,60 @@ func handleEquipItem(username, guardianIndex, itemName string) error {
 	}
 
 	return errCouldntFindItem
+}
+
+func saveLoadout(username, guardianIndex, loadoutName string) error {
+
+	const operation = "saveLoadout"
+
+	// Get the user given the username.
+	user, err := getUser(username)
+	if err != nil {
+		return errors.Wrap(err, operation+": get user failed")
+	}
+
+	// Create bungo service.
+	s, err := bungo.NewService(&http.Client{}, apiKey)
+	if err != nil {
+		return errors.Wrap(err, operation+": new bungo service failed")
+	}
+
+	// Convert the guardianIndex into an int.
+	number, err := strconv.Atoi(guardianIndex)
+	if err != nil {
+		return errors.Wrap(err, operation+": string to int failed")
+	}
+
+	// Check if the loadoutName is unique.
+	for _, v := range user.Characters[number].Loadouts {
+		if v.Name == loadoutName {
+			return errLoadoutNameTaken
+		}
+	}
+
+	// Get current loadout.
+	currentLoadout, err := user.Characters[number].getCurrentLoadout(s)
+	if err != nil {
+		return errors.Wrap(err, operation+":get current loadout failed")
+	}
+
+	// Add the loadout to the user.
+	user.Characters[number].Loadouts = append(user.Characters[number].Loadouts, modelLoadout{
+		Name:      loadoutName,
+		Kinetic:   currentLoadout["kinetic"],
+		Special:   currentLoadout["special"],
+		Power:     currentLoadout["power"],
+		Head:      currentLoadout["head"],
+		Arms:      currentLoadout["arms"],
+		Chest:     currentLoadout["chest"],
+		Legs:      currentLoadout["legs"],
+		ClassItem: currentLoadout["class item"],
+	})
+
+	// Save the user.
+	if err := user.save(); err != nil {
+		return errors.Wrap(err, operation+":save user failed")
+	}
+
+	return nil
 }

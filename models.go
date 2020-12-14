@@ -115,7 +115,7 @@ type modelCharacter struct {
 	user *modelUser
 
 	ID       string
-	Loadouts []map[string]*modelItem
+	Loadouts []modelLoadout
 }
 
 // getCurrentLoadout returns the characters currently equiped loadout.
@@ -286,6 +286,18 @@ func (m *modelCharacter) equipItem(s *bungo.Service, itemInstanceID string) erro
 	}
 
 	return nil
+}
+
+type modelLoadout struct {
+	Name      string
+	Kinetic   modelItem
+	Special   modelItem
+	Power     modelItem
+	Head      modelItem
+	Chest     modelItem
+	Arms      modelItem
+	Legs      modelItem
+	ClassItem modelItem
 }
 
 type modelItem struct {

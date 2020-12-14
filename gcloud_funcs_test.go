@@ -25,13 +25,21 @@ func TestWebhook(t *testing.T) {
 				"bucket":         {Resolved: "head"},
 				"guardian_index": {Resolved: "1"},
 			},
-		},*/
+		},
 		{
 			handler: "equip_item",
 			params: map[string]param{
 				"username":       {Resolved: testUsername},
 				"guardian_index": {Resolved: testCharacterIndex},
 				"item_name":      {Resolved: testItemName},
+			},
+		},*/
+		{
+			handler: "save_loadout",
+			params: map[string]param{
+				"username":       {Resolved: testUsername},
+				"guardian_index": {Resolved: testCharacterIndex},
+				"loadout_name":   {Resolved: testLoadoutName},
 			},
 		},
 	}

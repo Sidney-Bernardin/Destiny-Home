@@ -63,15 +63,19 @@ func Webhook(w http.ResponseWriter, r *http.Request) {
 		switch errors.Cause(err) {
 
 		case errUserNotFound:
-			res.Prompt.FirstSimple.Speech = `I couldn't find you in my database.`
+			res.Prompt.FirstSimple.Speech = errors.Cause(err).Error()
 			w.WriteHeader(http.StatusNotFound)
 
 		case errCouldntFindItem:
-			res.Prompt.FirstSimple.Speech = `I couldn't find that item.`
+			res.Prompt.FirstSimple.Speech = errors.Cause(err).Error()
 			w.WriteHeader(http.StatusNotFound)
 
 		case errOnlyOneAllowed:
-			res.Prompt.FirstSimple.Speech = `You can only have one item of this type equipped.`
+			res.Prompt.FirstSimple.Speech = errors.Cause(err).Error()
+			w.WriteHeader(http.StatusNotFound)
+
+		case errLoadoutNameTaken:
+			res.Prompt.FirstSimple.Speech = errors.Cause(err).Error()
 			w.WriteHeader(http.StatusNotFound)
 
 		default:

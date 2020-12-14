@@ -27,4 +27,5 @@ func init() {
 	testRefreshToken = os.Getenv("TEST_REFRESH_TOKEN")
 	testCharacterID = os.Getenv("TEST_CHARACTER_ID")
 	testCharacterIndex = os.Getenv("TEST_CHARACTER_INDEX")
+	testLoadoutName = os.Getenv("TEST_LOADOUT_NAME")
 }

@@ -18,6 +18,7 @@ var (
 	testRefreshToken   string
 	testCharacterID    string
 	testCharacterIndex string
+	testLoadoutName    string
 
 	gearHashMap = map[string]int{
 		"kinetic":    1498876634,
