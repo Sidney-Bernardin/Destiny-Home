@@ -236,6 +236,20 @@ func (m *modelCharacter) getBucket(s *bungo.Service, bucket string) ([]modelItem
 	return ret, nil
 }
 
+func (m *modelCharacter) getLoadout(loadoutName string) (*modelLoadout, error) {
+
+	const operation = "modelCharacter.getLoadout"
+
+	// Search for the loadout.
+	for _, v := range m.Loadouts {
+		if v.Name == loadoutName {
+			return &v, nil
+		}
+	}
+
+	return nil, errLoadoutNotFound
+}
+
 func (m *modelCharacter) equipItem(s *bungo.Service, itemInstanceID string) error {
 
 	const operation = "modelCharacter.equipItem"
@@ -298,6 +312,32 @@ type modelLoadout struct {
 	Arms      modelItem
 	Legs      modelItem
 	ClassItem modelItem
+}
+
+func (m *modelLoadout) getBucketWithName(bucketName string) *modelItem {
+
+	const operation = "modelLoadout.getBucketWithName"
+
+	switch bucketName {
+	case "kinetic":
+		return &m.Kinetic
+	case "special":
+		return &m.Special
+	case "power":
+		return &m.Power
+	case "head":
+		return &m.Head
+	case "arms":
+		return &m.Arms
+	case "chest":
+		return &m.Chest
+	case "legs":
+		return &m.Legs
+	case "class_item":
+		return &m.Kinetic
+	}
+
+	return nil
 }
 
 type modelItem struct {

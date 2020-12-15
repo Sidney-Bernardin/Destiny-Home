@@ -55,13 +55,28 @@ func processRequest(req *webhookRequest, res *webhookResponse) error {
 		guardianIndex := req.Intent.Params["guardian_index"].Resolved
 		loadoutName := req.Intent.Params["loadout_name"].Resolved
 
-		// Equip the item.
+		// Save the loadout.
 		if err := saveLoadout(username, guardianIndex, loadoutName); err != nil {
-			return errors.Wrap(err, operation+": handle save loadout item failed")
+			return errors.Wrap(err, operation+": handle save loadout failed")
 		}
 
 		// Setup the response.
 		res.Prompt.FirstSimple.Speech = fmt.Sprintf("Saved %s!", loadoutName)
+
+	case "equip_loadout":
+
+		// Get params.
+		username := req.Intent.Params["username"].Resolved
+		guardianIndex := req.Intent.Params["guardian_index"].Resolved
+		loadoutName := req.Intent.Params["loadout_name"].Resolved
+
+		// Equip the loadout.
+		if err := equipLoadout(username, guardianIndex, loadoutName); err != nil {
+			return errors.Wrap(err, operation+": handle equip loadout failed")
+		}
+
+		// Setup the response.
+		res.Prompt.FirstSimple.Speech = fmt.Sprintf("Equiped %s loadout!", loadoutName)
 	}
 
 	// Setup common response fields.
@@ -245,6 +260,87 @@ func saveLoadout(username, guardianIndex, loadoutName string) error {
 	// Save the user.
 	if err := user.save(); err != nil {
 		return errors.Wrap(err, operation+":save user failed")
+	}
+
+	return nil
+}
+
+func equipLoadout(username, guardianIndex, loadoutName string) error {
+
+	const operation = "equipLoadout"
+
+	// Get the user given the username.
+	user, err := getUser(username)
+	if err != nil {
+		return errors.Wrap(err, operation+": get user failed")
+	}
+
+	// Create bungo service.
+	s, err := bungo.NewService(&http.Client{}, apiKey)
+	if err != nil {
+		return errors.Wrap(err, operation+": new bungo service failed")
+	}
+
+	// Convert the guardianIndex into an int.
+	number, err := strconv.Atoi(guardianIndex)
+	if err != nil {
+		return errors.Wrap(err, operation+": string to int failed")
+	}
+
+	// Get the loadout given the name.
+	loadout, err := user.Characters[number].getLoadout(loadoutName)
+	if err != nil {
+		return errors.Wrap(err, operation+": get loadout failed")
+	}
+
+	successChan := make(chan struct{})
+	errChan := make(chan error)
+	notFoundChan := make(chan struct{})
+
+	for k := range gearHashMap {
+		go func(k string) {
+
+			// Get the items from the bucket.
+			bucket, err := user.Characters[number].getBucket(s, k)
+			if err != nil {
+				errChan <- errors.Wrap(err, operation+": getting bucket failed")
+				return
+			}
+
+			// Search the bucket for the item.
+			for _, item := range bucket {
+				if item.ItemInstanceID == loadout.getBucketWithName(k).ItemInstanceID {
+
+					// Equip the item.
+					err := user.Characters[number].equipItem(s, item.ItemInstanceID)
+					if err != nil {
+						errChan <- errors.Wrap(err, operation+": equip item failed")
+						return
+					}
+
+					// Save the user.
+					if err := user.save(); err != nil {
+						errChan <- errors.Wrap(err, operation+": save user failed")
+						return
+					}
+
+					successChan <- struct{}{}
+				}
+			}
+
+			notFoundChan <- struct{}{}
+		}(k)
+	}
+
+	for range gearHashMap {
+		select {
+		case _ = <-successChan:
+			return nil
+		case err := <-errChan:
+			return err
+		case _ = <-notFoundChan:
+			continue
+		}
 	}
 
 	return nil
