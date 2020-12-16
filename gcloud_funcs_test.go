@@ -42,14 +42,29 @@ func TestWebhook(t *testing.T) {
 				"loadout_name":   {Resolved: testLoadoutName},
 			},
 		},*/
+		/*{
+			handler: "list_loadouts",
+			params: map[string]param{
+				"username":       {Resolved: testUsername},
+				"guardian_index": {Resolved: testCharacterIndex},
+			},
+		},*/
 		{
-			handler: "equip_loadout",
+			handler: "delete_loadout",
 			params: map[string]param{
 				"username":       {Resolved: testUsername},
 				"guardian_index": {Resolved: testCharacterIndex},
 				"loadout_name":   {Resolved: testLoadoutName},
 			},
 		},
+		/*{
+			handler: "equip_loadout",
+			params: map[string]param{
+				"username":       {Resolved: testUsername},
+				"guardian_index": {Resolved: testCharacterIndex},
+				"loadout_name":   {Resolved: testLoadoutName},
+			},
+		},*/
 	}
 
 	// Run test cases.

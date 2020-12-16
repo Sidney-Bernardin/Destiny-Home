@@ -78,6 +78,10 @@ func Webhook(w http.ResponseWriter, r *http.Request) {
 			res.Prompt.FirstSimple.Speech = errors.Cause(err).Error()
 			w.WriteHeader(http.StatusNotFound)
 
+		case errLoadoutNotFound:
+			res.Prompt.FirstSimple.Speech = errors.Cause(err).Error()
+			w.WriteHeader(http.StatusNotFound)
+
 		default:
 
 			log.Println(Entry{

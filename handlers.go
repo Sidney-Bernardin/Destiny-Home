@@ -63,6 +63,40 @@ func processRequest(req *webhookRequest, res *webhookResponse) error {
 		// Setup the response.
 		res.Prompt.FirstSimple.Speech = fmt.Sprintf("Saved %s!", loadoutName)
 
+	case "list_loadouts":
+
+		// Get params.
+		username := req.Intent.Params["username"].Resolved
+		guardianIndex := req.Intent.Params["guardian_index"].Resolved
+
+		// Get the loadouts.
+		loadouts, err := listLoadouts(username, guardianIndex)
+		if err != nil {
+			return errors.Wrap(err, operation+": handle save loadout failed")
+		}
+
+		// Setup the response.
+		if loadouts == "" || loadouts == " " {
+			res.Prompt.FirstSimple.Speech = fmt.Sprintf("You don't have any loadouts.")
+			break
+		}
+		res.Prompt.FirstSimple.Speech = fmt.Sprintf(loadouts)
+
+	case "delete_loadout":
+
+		// Get params.
+		username := req.Intent.Params["username"].Resolved
+		guardianIndex := req.Intent.Params["guardian_index"].Resolved
+		loadoutName := req.Intent.Params["loadout_name"].Resolved
+
+		// Save the loadout.
+		if err := deleteLoadout(username, guardianIndex, loadoutName); err != nil {
+			return errors.Wrap(err, operation+": handle save loadout failed")
+		}
+
+		// Setup the response.
+		res.Prompt.FirstSimple.Speech = fmt.Sprintf("Deleted %s!", loadoutName)
+
 	case "equip_loadout":
 
 		// Get params.
@@ -256,6 +290,63 @@ func saveLoadout(username, guardianIndex, loadoutName string) error {
 		Legs:      currentLoadout["legs"],
 		ClassItem: currentLoadout["class item"],
 	})
+
+	// Save the user.
+	if err := user.save(); err != nil {
+		return errors.Wrap(err, operation+":save user failed")
+	}
+
+	return nil
+}
+
+func listLoadouts(username, guardianIndex string) (string, error) {
+
+	const operation = "listLoadout"
+
+	// Get the user given the username.
+	user, err := getUser(username)
+	if err != nil {
+		return "", errors.Wrap(err, operation+": get user failed")
+	}
+
+	// Convert the guardianIndex into an int.
+	number, err := strconv.Atoi(guardianIndex)
+	if err != nil {
+		return "", errors.Wrap(err, operation+": string to int failed")
+	}
+
+	// Get the loadout names.
+	names := []string{}
+	for _, v := range user.Characters[number].Loadouts {
+		names = append(names, v.Name)
+	}
+
+	// Return them as a single string.
+	ret := strings.Join(names, ", ")
+	return ret, nil
+}
+
+func deleteLoadout(username, guardianIndex, loadoutName string) error {
+
+	const operation = "deleteLoadout"
+
+	// Get the user given the username.
+	user, err := getUser(username)
+	if err != nil {
+		return errors.Wrap(err, operation+": get user failed")
+	}
+
+	// Convert the guardianIndex into an int.
+	number, err := strconv.Atoi(guardianIndex)
+	if err != nil {
+		return errors.Wrap(err, operation+": string to int failed")
+	}
+
+	// Delete the loadout given the name.
+	err = user.Characters[number].deleteLoadout(loadoutName)
+	if err != nil {
+		return errors.Wrap(err, operation+": delete loadout failed")
+	}
 
 	// Save the user.
 	if err := user.save(); err != nil {

@@ -250,6 +250,23 @@ func (m *modelCharacter) getLoadout(loadoutName string) (*modelLoadout, error) {
 	return nil, errLoadoutNotFound
 }
 
+func (m *modelCharacter) deleteLoadout(loadoutName string) error {
+
+	const operation = "modelCharacter.deleteLoadout"
+
+	// Search for the loadout.
+	for i, v := range m.Loadouts {
+		if v.Name == loadoutName {
+
+			// Remove the loadout.
+			m.Loadouts = append(m.Loadouts[:i], m.Loadouts[i+1:]...)
+			return nil
+		}
+	}
+
+	return errLoadoutNotFound
+}
+
 func (m *modelCharacter) equipItem(s *bungo.Service, itemInstanceID string) error {
 
 	const operation = "modelCharacter.equipItem"
