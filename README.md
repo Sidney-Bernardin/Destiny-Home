@@ -2,7 +2,7 @@
 
 
 ### What is this?
-Destiny Home is the backend to my Google Assistant action. 
+This is the backend to my Google Assistant action. 
 
 ##### My Google Home Action
 My Google Home action is a Destiny Item Manager (DIM) that I created with [Actions on Google](https://console.actions.google.com). A Destiny Item Manager can do things like move and equip item within the game of Destiny. [Here is an example of a popular third party Destiny Item Manager](https://app.destinyitemmanager.com/).  
